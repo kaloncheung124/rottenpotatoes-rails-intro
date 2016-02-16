@@ -1,5 +1,11 @@
 class MoviesController < ApplicationController
-
+  
+  def initialize
+    @all_ratings = Movie.ratings
+    @checked_ratings = @all_ratings
+    super
+  end
+  
   def movie_params
     params.require(:movie).permit(:title, :rating, :description, :release_date)
   end
@@ -11,14 +17,41 @@ class MoviesController < ApplicationController
   end
 
   def index
+    if params.has_key?(:ratings) && params.has_key?(:refresh)
+      @checked_ratings = params[:ratings].keys
+      session[:ratings] = @checked_ratings
+    else
+      if session[:ratings]; @checked_ratings = session[:ratings]; end
+    end
+    ratings = @checked_ratings
     if !params.has_key?(:sort)
-      @movies = Movie.all
+      sort = session[:sort]
     else
       sort = params[:sort]
-      @movies = Movie.order("#{sort}")
+      session[:sort] = sort
+    end
+    
+    @movies = Movie.where(rating: ratings).order("#{sort}")
+  end
+  
+  helper_method :show_rat, :hilite?
+  
+  def show_rat(rating)
+    if @checked_ratings.include?(rating)
+      return true
     end
   end
-
+  
+  helper_method :hilite
+  
+  def hilite?(tagname)
+    if session[:sort] == tagname
+      'hilite'
+    else
+      'th'
+    end
+  end
+  
   def new
     # default: render 'new' template
   end
