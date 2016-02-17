@@ -3,6 +3,7 @@ class MoviesController < ApplicationController
   def initialize
     @all_ratings = Movie.ratings
     @checked_ratings = @all_ratings
+    @sort
     super
   end
   
@@ -17,22 +18,34 @@ class MoviesController < ApplicationController
   end
 
   def index
-    if params.has_key?(:ratings) && params.has_key?(:refresh)
-      @checked_ratings = params[:ratings].keys
-      session[:ratings] = @checked_ratings
+    if !session.has_key? :ratings; session[:ratings] = @all_ratings; end
+    if !session.has_key? :sort; session[:sort] = nil; end
+    redir = false
+    
+    if params.has_key?(:ratings) || params.has_key?(:ratings_keys)
+      params[:ratings_keys] ||= params[:ratings].keys
+      session[:ratings] = params[:ratings_keys]
     else
-      if session[:ratings]; @checked_ratings = session[:ratings]; end
+      redir = true
     end
-    ratings = @checked_ratings
-    if !params.has_key?(:sort)
-      sort = session[:sort]
+    @checked_ratings = session[:ratings]
+    
+    if params.has_key?(:sort)
+      session[:sort] = params[:sort]
     else
-      sort = params[:sort]
-      session[:sort] = sort
+      redir = true
+    end
+    @sort = session[:sort]
+    
+    if redir && !params[:redir]
+      redir_hash = {ratings_keys: @checked_ratings, sort: @sort, redir: true}
+      flash.keep
+      redirect_to movies_path(redir_hash)
     end
     
-    @movies = Movie.where(rating: ratings).order("#{sort}")
+    @movies = Movie.where(rating: @checked_ratings).order("#{@sort}")
   end
+  
   
   helper_method :show_rat, :hilite?
   
